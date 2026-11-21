@@ -1,0 +1,13 @@
+{
+  "CPU": "AMD Ryzen 5 4600H with Radeon Graphics",
+  "Logical cores": 12,
+  "RAM": "7.4 GiB",
+  "OS": "Windows 11 (10.0.26300)",
+  "Python": "3.13.7",
+  "mitmproxy": "12.2.3",
+  "FastAPI": "0.142.2",
+  "uvicorn": "0.54.0",
+  "httpx": "0.28.1",
+  "detect-secrets": "1.5.0",
+  "Git commit": "43035cf-dirty"
+}

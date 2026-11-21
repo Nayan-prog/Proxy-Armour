@@ -1,0 +1,15 @@
+op,stream,flows,integrity_ok,counters_ok,wrong_restorations,leak_of_untokenized
+drop,False,115,115,115,0,0
+drop,True,115,115,115,0,0
+alter_case,False,115,115,115,0,0
+alter_case,True,115,115,115,0,0
+truncate,False,115,115,115,0,0
+truncate,True,115,115,115,0,0
+split,False,115,115,115,0,0
+split,True,115,115,115,0,0
+duplicate,False,115,115,115,0,0
+duplicate,True,115,115,115,0,0
+forge,False,115,115,115,0,0
+forge,True,115,115,115,0,0
+leak,False,115,115,115,0,1
+leak,True,115,115,115,0,1

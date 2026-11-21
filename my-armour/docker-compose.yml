@@ -1,0 +1,124 @@
+# Proxy Armour - full stack.  Start with:  python scripts/stack.py up   (or make up / scripts\armour.ps1 up)
+#
+# Secrets come from .env.docker (git-ignored), which `stack.py up` generates with
+# random values on first run. Published ports are bound to 127.0.0.1 only: the
+# proxy and the admin API must not be reachable from the network.
+#
+#   http://localhost:3000   dashboard
+#   http://localhost:8000   admin API (+ /docs)
+#   http://localhost:8080   the proxy - point HTTPS_PROXY here and trust ./certs/mitmproxy-ca-cert.pem
+name: proxy-armour
+
+x-python: &python
+  build:
+    context: .
+    dockerfile: docker/python.Dockerfile
+  image: proxy-armour/python:latest
+  restart: unless-stopped
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    env_file: [{path: .env.docker, required: true}]
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./docker/postgres-init:/docker-entrypoint-initdb.d:ro
+    # not published: the host may already run PostgreSQL on 5432
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    # live counters / pub-sub only: nothing worth persisting
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  scanner:
+    <<: *python
+    # schema first, then the API (scanner + /events + admin API)
+    command: ["sh", "-c", "alembic upgrade head && exec uvicorn app.main:app --host 0.0.0.0 --port 8000"]
+    env_file: [{path: .env.docker, required: true}]
+    depends_on:
+      postgres: {condition: service_healthy}
+      redis: {condition: service_healthy}
+    ports: ["127.0.0.1:8000:8000"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3)"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 15s
+
+  mock-llm:
+    <<: *python
+    command: ["uvicorn", "mock_llm.app:app", "--host", "0.0.0.0", "--port", "9000"]
+    # demo: print what the "LLM provider" receives (placeholders, never the secrets)
+    environment:
+      MOCK_LLM_SHOW_RECEIVED: "1"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:9000/docs', timeout=3)"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  proxy:
+    <<: *python
+    # confdir=/certs: the CA is created there and shared with the host (./certs).
+    # connection_strategy=lazy: certificates come from the SNI, no upstream
+    # connection before the request hook - required in demo mode / offline.
+    command:
+      - mitmdump
+      - -s
+      - proxy/armour_addon.py
+      - --listen-host
+      - 0.0.0.0
+      - --listen-port
+      - "8080"
+      - --set
+      - confdir=/certs
+      - --set
+      - connection_strategy=lazy
+      # no per-request lines: URLs can carry API keys (?key=), higher levels print bodies
+      - --set
+      - flow_detail=0
+    env_file: [{path: .env.docker, required: true}]
+    volumes:
+      - ./certs:/certs
+    depends_on:
+      scanner: {condition: service_healthy}
+      mock-llm: {condition: service_healthy}
+    ports: ["127.0.0.1:8080:8080"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import os, socket; socket.create_connection(('127.0.0.1', 8080), 3); assert os.path.exists('/certs/mitmproxy-ca-cert.pem')"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 10s
+
+  dashboard:
+    build:
+      context: ./dashboard
+      args:
+        NEXT_PUBLIC_API_URL: http://scanner:8000
+    image: proxy-armour/dashboard:latest
+    depends_on:
+      scanner: {condition: service_healthy}
+    ports: ["127.0.0.1:3000:3000"]
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/login').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    restart: unless-stopped
+
+volumes:
+  pgdata:

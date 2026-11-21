@@ -1,0 +1,35 @@
+# --- Python ---
+venv/
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# --- Secrets: never commit these ---
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# --- Node / Next.js (future admin dashboard) ---
+node_modules/
+.next/
+
+# --- Editors / OS ---
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# --- mitmproxy CA from the compose proxy (contains the CA PRIVATE KEY) ---
+certs/*
+!certs/.gitkeep
+
+# --- evaluation corpus: regenerated from a seed, contains fake-but-realistic keys ---
+eval/data/
+
+# --- test coverage output ---
+.coverage
+.coverage.*
+htmlcov/

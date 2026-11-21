@@ -1,0 +1,37 @@
+# Direct dependencies of Proxy Armour, pinned to the versions tested (Python 3.13).
+# Install with:  pip install -r requirements.txt
+
+# Scanner + admin API
+fastapi==0.142.2
+uvicorn==0.54.0
+pydantic==2.13.5
+pydantic-settings==2.16.3
+
+# Persistence (PostgreSQL via SQLAlchemy 2.0 + Alembic migrations)
+SQLAlchemy==2.0.58
+alembic==1.20.1
+psycopg[binary]==3.3.9
+
+# Optional live counters / live feed
+redis==8.1.0
+
+# Admin auth
+bcrypt==5.0.0
+PyJWT==2.15.1
+
+# Intercepting proxy
+mitmproxy==12.2.3
+httpx==0.28.1
+
+# Config loading (config.yaml)
+ruamel.yaml==0.19.1
+
+# Testing
+pytest==9.1.1
+fakeredis==2.40.0
+
+# Evaluation (eval/) - external baseline
+detect-secrets==1.5.0
+
+# Testing - coverage
+pytest-cov==7.1.0

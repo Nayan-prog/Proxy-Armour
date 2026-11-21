@@ -1,0 +1,17 @@
+# Deep-merged on top of config.yaml inside the containers (ARMOUR_CONFIG_OVERLAY).
+# Only values that differ from a local run belong here.
+
+scanner:
+  host: scanner              # service name on the compose network (proxy -> API)
+
+demo:
+  # the compose stack is a self-contained demo: LLM traffic goes to the mock.
+  # Set to false to forward to the real providers (needs internet + real keys).
+  enabled: true
+  upstream_host: mock-llm
+  upstream_port: 9000
+
+admin:
+  cors_origins:
+    - http://localhost:3000
+    - http://127.0.0.1:3000

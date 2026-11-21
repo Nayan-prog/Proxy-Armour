@@ -1,0 +1,111 @@
+# Proxy Armour configuration - the single source of truth for runtime settings.
+# Loaded and validated by armour_config.py. Override the file location with
+# the ARMOUR_CONFIG environment variable.
+#
+# Never put secrets (API keys, DB passwords) in this file - use a .env file
+# (git-ignored) for those.
+
+scanner:
+  host: 127.0.0.1
+  port: 8000
+
+proxy:
+  host: 127.0.0.1
+  port: 8080
+  # seconds the proxy waits for the scanner before failing closed (503)
+  scanner_timeout: 5
+  # only POST requests to these hosts are inspected.
+  # exact hostnames, or "*.domain" to match any subdomain of domain
+  # (e.g. *.openai.azure.com matches contoso.openai.azure.com, not openai.azure.com)
+  llm_hosts:
+    - api.openai.com
+    - api.anthropic.com
+    - generativelanguage.googleapis.com
+    - "*.openai.azure.com"
+    - api.mistral.ai
+    - api.groq.com
+  # bodies that are not JSON (multipart file uploads, form data, binary) can't be
+  # scanned, so they are always blocked. status must be 4xx/5xx.
+  unsupported_body:
+    status: 415
+    message: "Proxy Armour can only scan JSON request bodies - blocked for safety"
+
+# detectors run by the scanner; each finding records which one found it.
+# at least one must be enabled.
+detectors:
+  regex:
+    enabled: true
+  entropy:
+    enabled: true
+    min_length: 20          # shortest token considered
+    base64_threshold: 4.0   # bits/char; max possible is 6 (log2 64)
+    hex_threshold: 3.0      # bits/char; max possible is 4 (log2 16)
+    min_digits: 2           # base64-like tokens need >= this many digits
+  ast:
+    enabled: true
+
+# what to do with each finding, by finding type: allow | tokenize | block
+#   tokenize: replace the value with a placeholder (PA_<TYPE>_<8 hex>) before it
+#             leaves the machine, and put the original back into the LLM's answer
+# request action = block if any finding is block, else tokenize if any, else allow
+policy:
+  # types not listed below (e.g. from a new detector). must not be "allow".
+  default_action: block
+  types:
+    # personal data - placeholder is enough for the LLM to reason about it
+    EMAIL: tokenize
+    PHONE_IN: tokenize
+    # government / financial identifiers - never leave the machine
+    AADHAAR: block
+    PAN: block
+    CREDIT_CARD: block
+    # secrets
+    AWS_KEY: tokenize
+    OPENAI_KEY: tokenize
+    ANTHROPIC_KEY: tokenize
+    GITHUB_TOKEN: tokenize
+    GOOGLE_API_KEY: tokenize
+    STRIPE_KEY: tokenize
+    SLACK_TOKEN: tokenize
+    JWT: tokenize
+    PRIVATE_KEY: tokenize
+    DB_CONNECTION_STRING: tokenize
+    HIGH_ENTROPY_STRING: tokenize
+    HARDCODED_SECRET: tokenize
+
+tokenization:
+  # how long a request's {placeholder: original} map may live in memory waiting
+  # for the response. Must exceed the slowest upstream response you expect.
+  ttl_seconds: 120
+  # how often expired maps are purged
+  cleanup_interval_seconds: 10
+
+# demo mode: forward LLM traffic to the local mock LLM (mock_llm/) instead of
+# the real provider - no API keys needed. Start it with: python -m mock_llm
+demo:
+  enabled: false
+  upstream_host: 127.0.0.1
+  upstream_port: 9000
+
+# admin API (/api/*) used by the dashboard. Credentials and the JWT signing key
+# live in .env (see .env.example), never here.
+admin:
+  cors_origins:
+    - http://localhost:3000
+  jwt_expiry_hours: 8
+  login_max_failures: 5       # failed logins per client IP ...
+  login_window_seconds: 300   # ... within this window -> 429
+
+# audit events: the proxy POSTs one metadata-only event per flow to /events
+events:
+  enabled: true
+  timeout_seconds: 2
+
+# the proxy re-reads the policy table (via GET /internal/policies) this often
+policy_sync:
+  poll_seconds: 10
+
+# /api/live server-sent events
+live:
+  poll_seconds: 2             # DB polling interval when Redis is unavailable
+  heartbeat_seconds: 15       # keep-alive comment so proxies don't drop the connection

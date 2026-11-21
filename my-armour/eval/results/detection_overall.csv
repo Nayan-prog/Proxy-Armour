@@ -1,0 +1,17 @@
+split,config,scope,tp,fp,fn,precision,recall,f1,fpr,fnr
+test,(a) regex,all types,112,0,95,1.0000,0.5411,0.7022,0.0000,0.4589
+test,(a) regex,secrets only,49,0,95,1.0000,0.3403,0.5078,0.0000,0.6597
+test,(b) regex+entropy,all types,137,0,70,1.0000,0.6618,0.7965,0.0000,0.3382
+test,(b) regex+entropy,secrets only,74,0,70,1.0000,0.5139,0.6789,0.0000,0.4861
+test,(c) regex+entropy+AST,all types,183,0,24,1.0000,0.8841,0.9385,0.0000,0.1159
+test,(c) regex+entropy+AST,secrets only,120,0,24,1.0000,0.8333,0.9091,0.0000,0.1667
+test,(d) detect-secrets,all types,89,2,118,0.9780,0.4300,0.5973,0.0800,0.5700
+test,(d) detect-secrets,secrets only,89,2,55,0.9780,0.6181,0.7574,0.0364,0.3819
+dev,(a) regex,all types,283,2,204,0.9930,0.5811,0.7332,0.0000,0.4189
+dev,(a) regex,secrets only,130,0,204,1.0000,0.3892,0.5603,0.0000,0.6108
+dev,(b) regex+entropy,all types,339,0,148,1.0000,0.6961,0.8208,0.0000,0.3039
+dev,(b) regex+entropy,secrets only,186,0,148,1.0000,0.5569,0.7154,0.0000,0.4431
+dev,(c) regex+entropy+AST,all types,440,0,47,1.0000,0.9035,0.9493,0.0000,0.0965
+dev,(c) regex+entropy+AST,secrets only,287,0,47,1.0000,0.8593,0.9243,0.0000,0.1407
+dev,(d) detect-secrets,all types,206,23,281,0.8996,0.4230,0.5754,0.2373,0.5770
+dev,(d) detect-secrets,secrets only,206,23,128,0.8996,0.6168,0.7318,0.1085,0.3832
